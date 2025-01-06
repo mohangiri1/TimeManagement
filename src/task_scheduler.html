@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Scheduler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .tasks-container, .schedule-container, .history-container {
+            margin-top: 20px;
+        }
+        .task {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .task input[type="time"] {
+            margin-left: 10px;
+        }
+        .task button {
+            margin-left: 10px;
+        }
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Scheduler</h1>
+    <div>
+        <h2> </h2>
+        <div id="tasks-container" class="tasks-container"></div>
+    </div>
+    <div class="schedule-container">
+        <h2>Assigned Schedule</h2>
+        <table class="schedule-table" id="schedule-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Time Slot</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="schedule-body">
+                <tr>
+                    <td colspan="3">No schedule assigned yet.</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="save-message" id="save-message">Schedule saved successfully!</p>
+        <button onclick="saveScheduleAsPDF()">Save as PDF</button>
+    </div>
+    <div class="history-container">
+        <h2>Check Schedule History</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View Schedule</button>
+        <table class="schedule-table" id="history-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Time Slot</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const quadrants = [
+            'urgent-important',
+            'not-urgent-important',
+            'urgent-not-important',
+            'not-urgent-not-important'
+        ];
+
+        const tasksContainer = document.getElementById('tasks-container');
+        const scheduleBody = document.getElementById('schedule-body');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        function loadTasks() {
+            const tasks = localStorage.getItem(`eisenhower-matrix-${today}`);
+            if (tasks) {
+                const parsedTasks = JSON.parse(tasks);
+                let hasTasks = false;
+
+                quadrants.forEach(quadrant => {
+                    const taskList = parsedTasks[quadrant];
+                    if (taskList.length > 0) {
+                        hasTasks = true;
+                        taskList.forEach(task => {
+                            createTaskRow(task, quadrant);
+                        });
+                    }
+                });
+
+                if (!hasTasks) {
+                    tasksContainer.innerHTML = '<p>No tasks available for today.</p>';
+                }
+            } else {
+                tasksContainer.innerHTML = '<p>No tasks available for today.</p>';
+            }
+        }
+
+        function createTaskRow(task, quadrant) {
+            const taskRow = document.createElement('div');
+            taskRow.classList.add('task');
+
+            const taskName = document.createElement('span');
+            taskName.textContent = `${task} (${quadrant.replace('-', ' & ')})`;
+
+            const startTimeInput = document.createElement('input');
+            startTimeInput.type = 'time';
+            startTimeInput.placeholder = 'Start Time';
+
+            const endTimeInput = document.createElement('input');
+            endTimeInput.type = 'time';
+            endTimeInput.placeholder = 'End Time';
+
+            const assignButton = document.createElement('button');
+            assignButton.textContent = 'Assign';
+            assignButton.onclick = () => assignTaskToSchedule(taskName.textContent, startTimeInput.value, endTimeInput.value);
+
+            taskRow.appendChild(taskName);
+            taskRow.appendChild(startTimeInput);
+            taskRow.appendChild(endTimeInput);
+            taskRow.appendChild(assignButton);
+
+            tasksContainer.appendChild(taskRow);
+        }
+
+        function assignTaskToSchedule(task, startTime, endTime) {
+            if (!startTime || !endTime) {
+                alert('Please select both start and end times.');
+                return;
+            }
+
+            if (startTime >= endTime) {
+                alert('End time must be later than start time.');
+                return;
+            }
+
+            if (scheduleBody.children.length === 1 && scheduleBody.children[0].textContent.includes('No schedule assigned yet.')) {
+                scheduleBody.innerHTML = '';
+            }
+
+            const scheduleRow = document.createElement('tr');
+
+            const taskCell = document.createElement('td');
+            taskCell.textContent = task;
+
+            const timeCell = document.createElement('td');
+            timeCell.textContent = `${startTime} - ${endTime}`;
+
+            const removeButtonCell = document.createElement('td');
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.onclick = () => removeTaskFromSchedule(scheduleRow, task);
+
+            removeButtonCell.appendChild(removeButton);
+            scheduleRow.appendChild(taskCell);
+            scheduleRow.appendChild(timeCell);
+            scheduleRow.appendChild(removeButtonCell);
+
+            scheduleBody.appendChild(scheduleRow);
+
+            const taskDiv = Array.from(tasksContainer.children).find(div => div.textContent.includes(task));
+            if (taskDiv) taskDiv.remove();
+
+            saveSchedule();
+        }
+
+        function removeTaskFromSchedule(row, task) {
+            row.remove();
+            const savedSchedule = JSON.parse(localStorage.getItem(`task-schedule-${today}`)) || [];
+            const updatedSchedule = savedSchedule.filter(item => item.task !== task);
+            localStorage.setItem(`task-schedule-${today}`, JSON.stringify(updatedSchedule));
+        }
+
+        function saveSchedule() {
+            const scheduleData = [];
+            Array.from(scheduleBody.children).forEach(row => {
+                const task = row.children[0].textContent;
+                const time = row.children[1].textContent;
+                scheduleData.push({ task, time });
+            });
+
+            localStorage.setItem(`task-schedule-${today}`, JSON.stringify(scheduleData));
+            saveMessage.style.display = 'block';
+
+            setTimeout(() => {
+                saveMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        function loadSchedule() {
+            const scheduleData = localStorage.getItem(`task-schedule-${today}`);
+            if (scheduleData) {
+                const parsedSchedule = JSON.parse(scheduleData);
+                scheduleBody.innerHTML = '';
+
+                parsedSchedule.forEach(({ task, time }) => {
+                    const scheduleRow = document.createElement('tr');
+
+                    const taskCell = document.createElement('td');
+                    taskCell.textContent = task;
+
+                    const timeCell = document.createElement('td');
+                    timeCell.textContent = time;
+
+                    const removeButtonCell = document.createElement('td');
+                    const removeButton = document.createElement('button');
+                    removeButton.textContent = 'Remove';
+                    removeButton.onclick = () => removeTaskFromSchedule(scheduleRow, task);
+
+                    removeButtonCell.appendChild(removeButton);
+                    scheduleRow.appendChild(taskCell);
+                    scheduleRow.appendChild(timeCell);
+                    scheduleRow.appendChild(removeButtonCell);
+                    scheduleBody.appendChild(scheduleRow);
+                });
+            }
+        }
+
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyData = localStorage.getItem(`task-schedule-${selectedDate}`);
+            if (historyData) {
+                const parsedHistory = JSON.parse(historyData);
+                historyBody.innerHTML = '';
+
+                parsedHistory.forEach(({ task, time }) => {
+                    const historyRow = document.createElement('tr');
+
+                    const taskCell = document.createElement('td');
+                    taskCell.textContent = task;
+
+                    const timeCell = document.createElement('td');
+                    timeCell.textContent = time;
+
+                    historyRow.appendChild(taskCell);
+                    historyRow.appendChild(timeCell);
+                    historyBody.appendChild(historyRow);
+                });
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No schedule found for the selected date.</td></tr>';
+            }
+        }
+
+        function saveScheduleAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set title for the PDF
+            doc.setFontSize(18);
+            doc.text('Task Schedule for ' + today, 14, 20);
+
+            // Set font for the task list
+            doc.setFontSize(12);
+
+            const scheduleData = JSON.parse(localStorage.getItem(`task-schedule-${today}`));
+
+            if (scheduleData && scheduleData.length > 0) {
+                let yPosition = 30;
+
+                // Loop through the tasks and add each one with a bullet point
+                scheduleData.forEach(({ task, time }, index) => {
+                    doc.text('• ' + task + ' (' + time + ')', 14, yPosition);
+                    yPosition += 10;  // Adjust vertical space for each task
+                });
+
+                // Save the PDF with a filename
+                doc.save(`schedule-${today}.pdf`);
+            } else {
+                alert('No schedule found to save.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+            loadSchedule();
+        });
+    </script>
+</body>
+</html>

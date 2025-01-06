@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning of the Day</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .Learning-container {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Things to Learn</h1>
+
+    <div class="Learning-container">
+        <h2> </h2>
+        <input type="text" id="Learning-input" placeholder="Add an item to learn...">
+        <button onclick="addLearningItem()">Add Item</button>
+        <ul id="Learning-list"></ul>
+        <button onclick="saveLearning()">Save Learning</button>
+        <p class="save-message" id="save-message">Learning saved successfully!</p>
+    </div>
+
+    <div class="history-container">
+        <h2>View Past Learned things</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View learned things</button>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Learning</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const LearningInput = document.getElementById('Learning-input');
+        const LearningList = document.getElementById('Learning-list');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        // Load Learning for today (if it exists)
+        function loadLearning() {
+            const Learning = localStorage.getItem(`Learning-${today}`);
+            if (Learning) {
+                LearningList.innerHTML = Learning;
+            }
+        }
+
+        // Add a new item to the Learning list
+        function addLearningItem() {
+            const LearningText = LearningInput.value.trim();
+            if (LearningText) {
+                const listItem = document.createElement('li');
+                listItem.textContent = LearningText;
+                LearningList.appendChild(listItem);
+                LearningInput.value = '';
+            }
+        }
+
+        // Save the Learning for today
+        function saveLearning() {
+            const LearningItems = LearningList.innerHTML.trim();
+            if (LearningItems) {
+                localStorage.setItem(`Learning-${today}`, LearningItems);
+                saveMessage.style.display = 'block';
+                setTimeout(() => {
+                    saveMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // View past Learnings by date
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyLearning = localStorage.getItem(`Learning-${selectedDate}`);
+            if (historyLearning) {
+                historyBody.innerHTML = `
+                    <tr>
+                        <td>${selectedDate}</td>
+                        <td><ul>${historyLearning}</ul></td>
+                    </tr>
+                `;
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No Learning found for the selected date.</td></tr>';
+            }
+        }
+
+        // Initialize the page with today's Learning
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLearning();
+        });
+    </script>
+</body>
+</html>

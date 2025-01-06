@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Notes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .tasks-container, .notes-container, .history-container {
+            margin-top: 20px;
+        }
+        .task {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Notes</h1>
+    <div>
+        <h2> </h2>
+        <div id="tasks-container" class="tasks-container"></div>
+    </div>
+    <div class="notes-container">
+        <h2>Saved Notes</h2>
+        <button onclick="saveNotes()">Save Notes</button>
+        <p class="save-message" id="save-message">Notes saved successfully!</p>
+    </div>
+    <div class="history-container">
+        <h2>Check Notes History</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View Notes</button>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const quadrants = [
+            'urgent-important',
+            'not-urgent-important',
+            'urgent-not-important',
+            'not-urgent-not-important'
+        ];
+
+        const tasksContainer = document.getElementById('tasks-container');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        function loadTasks() {
+            const tasks = localStorage.getItem(`eisenhower-matrix-${today}`);
+            if (tasks) {
+                const parsedTasks = JSON.parse(tasks);
+                let hasTasks = false;
+
+                quadrants.forEach(quadrant => {
+                    const taskList = parsedTasks[quadrant];
+                    if (taskList.length > 0) {
+                        hasTasks = true;
+                        taskList.forEach(task => {
+                            createTaskNote(task, quadrant);
+                        });
+                    }
+                });
+
+                if (!hasTasks) {
+                    tasksContainer.innerHTML = '<p>No tasks available for today.</p>';
+                }
+            } else {
+                tasksContainer.innerHTML = '<p>No tasks available for today.</p>';
+            }
+        }
+
+        function createTaskNote(task, quadrant) {
+            const taskDiv = document.createElement('div');
+            taskDiv.classList.add('task');
+
+            const taskTitle = document.createElement('h3');
+            taskTitle.textContent = `${task} (${quadrant.replace('-', ' & ')})`;
+
+            const taskNote = document.createElement('textarea');
+            taskNote.id = `note-${task}`;
+
+            taskDiv.appendChild(taskTitle);
+            taskDiv.appendChild(taskNote);
+
+            tasksContainer.appendChild(taskDiv);
+        }
+
+        function saveNotes() {
+            const notesData = {};
+            Array.from(tasksContainer.children).forEach(taskDiv => {
+                const taskTitle = taskDiv.querySelector('h3').textContent.split(' (')[0];
+                const note = taskDiv.querySelector('textarea').value;
+                notesData[taskTitle] = note;
+            });
+
+            localStorage.setItem(`task-notes-${today}`, JSON.stringify(notesData));
+            saveMessage.style.display = 'block';
+
+            setTimeout(() => {
+                saveMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        function loadNotes() {
+            const notes = localStorage.getItem(`task-notes-${today}`);
+            if (notes) {
+                const parsedNotes = JSON.parse(notes);
+
+                Array.from(tasksContainer.children).forEach(taskDiv => {
+                    const taskTitle = taskDiv.querySelector('h3').textContent.split(' (')[0];
+                    if (parsedNotes[taskTitle]) {
+                        taskDiv.querySelector('textarea').value = parsedNotes[taskTitle];
+                    }
+                });
+            }
+        }
+
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyData = localStorage.getItem(`task-notes-${selectedDate}`);
+            if (historyData) {
+                const parsedHistory = JSON.parse(historyData);
+                historyBody.innerHTML = '';
+
+                Object.entries(parsedHistory).forEach(([task, note]) => {
+                    const historyRow = document.createElement('tr');
+
+                    const taskCell = document.createElement('td');
+                    taskCell.textContent = task;
+
+                    const noteCell = document.createElement('td');
+                    noteCell.textContent = note;
+
+                    historyRow.appendChild(taskCell);
+                    historyRow.appendChild(noteCell);
+                    historyBody.appendChild(historyRow);
+                });
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No notes found for the selected date.</td></tr>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+            loadNotes();
+        });
+    </script>
+</body>
+</html>

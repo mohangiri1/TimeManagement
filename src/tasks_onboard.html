@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks Onboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .onboard-tasks-container {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .task-item button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tasks Onboard</h1>
+
+    <div class="onboard-tasks-container">
+        <h2> </h2>
+        <input type="text" id="onboard-task-input" placeholder="Add an onboard task...">
+        <button onclick="addOnboardTask()">Add Task</button>
+        <ul id="onboard-task-list"></ul>
+        <button onclick="saveOnboardTasks()">Save Tasks</button>
+        <p class="save-message" id="save-message">Tasks saved successfully!</p>
+    </div>
+
+    <div class="history-container">
+        <h2>View Past Onboard Tasks</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View Tasks</button>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Onboard Tasks</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const onboardTaskInput = document.getElementById('onboard-task-input');
+        const onboardTaskList = document.getElementById('onboard-task-list');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        // Load onboard tasks for today (if they exist)
+        function loadOnboardTasks() {
+            const tasks = localStorage.getItem(`onboard-tasks-${today}`);
+            if (tasks) {
+                onboardTaskList.innerHTML = tasks;
+            }
+        }
+
+        // Add a new onboard task to the list
+        function addOnboardTask() {
+            const taskText = onboardTaskInput.value.trim();
+            if (taskText) {
+                const listItem = document.createElement('li');
+                listItem.classList.add('task-item');
+                
+                const taskContent = document.createElement('span');
+                taskContent.innerHTML = convertLinksToHyperlinks(taskText);
+                
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove';
+                removeButton.onclick = () => removeOnboardTask(listItem);
+                
+                listItem.appendChild(taskContent);
+                listItem.appendChild(removeButton);
+                onboardTaskList.appendChild(listItem);
+                
+                onboardTaskInput.value = '';
+            }
+        }
+
+        // Convert any URLs in the task text into hyperlinks
+        function convertLinksToHyperlinks(text) {
+            const urlPattern = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlPattern, (url) => `<a href="${url}" target="_blank">${url}</a>`);
+        }
+
+        // Remove an onboard task from the list
+        function removeOnboardTask(taskItem) {
+            taskItem.remove();
+            saveOnboardTasks();
+        }
+
+        // Save the onboard tasks for today
+        function saveOnboardTasks() {
+            const taskItems = onboardTaskList.innerHTML.trim();
+            if (taskItems) {
+                localStorage.setItem(`onboard-tasks-${today}`, taskItems);
+                saveMessage.style.display = 'block';
+                setTimeout(() => {
+                    saveMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // View past onboard tasks by date
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyTasks = localStorage.getItem(`onboard-tasks-${selectedDate}`);
+            if (historyTasks) {
+                historyBody.innerHTML = `
+                    <tr>
+                        <td>${selectedDate}</td>
+                        <td><ul>${historyTasks}</ul></td>
+                    </tr>
+                `;
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No tasks found for the selected date.</td></tr>';
+            }
+        }
+
+        // Initialize the page with today's onboard tasks
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOnboardTasks();
+        });
+    </script>
+</body>
+</html>

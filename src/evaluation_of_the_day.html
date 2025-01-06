@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluation of the Day</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .evaluation-container {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Evaluation of the Day</h1>
+
+    <div class="evaluation-container">
+        <h2> </h2>
+        <input type="text" id="evaluation-input" placeholder="Add an evaluation item...">
+        <button onclick="addEvaluationItem()">Add Item</button>
+        <ul id="evaluation-list"></ul>
+        <button onclick="saveEvaluation()">Save Evaluation</button>
+        <p class="save-message" id="save-message">Evaluation saved successfully!</p>
+    </div>
+
+    <div class="history-container">
+        <h2>View Past Evaluations</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View Evaluation</button>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Evaluation</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const evaluationInput = document.getElementById('evaluation-input');
+        const evaluationList = document.getElementById('evaluation-list');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        // Load evaluation for today (if it exists)
+        function loadEvaluation() {
+            const evaluation = localStorage.getItem(`evaluation-${today}`);
+            if (evaluation) {
+                evaluationList.innerHTML = evaluation;
+            }
+        }
+
+        // Add a new item to the evaluation list
+        function addEvaluationItem() {
+            const evaluationText = evaluationInput.value.trim();
+            if (evaluationText) {
+                const listItem = document.createElement('li');
+                listItem.textContent = evaluationText;
+                evaluationList.appendChild(listItem);
+                evaluationInput.value = '';
+            }
+        }
+
+        // Save the evaluation for today
+        function saveEvaluation() {
+            const evaluationItems = evaluationList.innerHTML.trim();
+            if (evaluationItems) {
+                localStorage.setItem(`evaluation-${today}`, evaluationItems);
+                saveMessage.style.display = 'block';
+                setTimeout(() => {
+                    saveMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // View past evaluations by date
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyEvaluation = localStorage.getItem(`evaluation-${selectedDate}`);
+            if (historyEvaluation) {
+                historyBody.innerHTML = `
+                    <tr>
+                        <td>${selectedDate}</td>
+                        <td><ul>${historyEvaluation}</ul></td>
+                    </tr>
+                `;
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No evaluation found for the selected date.</td></tr>';
+            }
+        }
+
+        // Initialize the page with today's evaluation
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEvaluation();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extra Things to Do</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .extra-tasks-container {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+        }
+        .save-message {
+            color: green;
+            font-weight: bold;
+            display: none;
+            text-align: center;
+        }
+        .history-container {
+            margin-top: 40px;
+        }
+        .history-container select {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Extra Things to Do</h1>
+
+    <div class="extra-tasks-container">
+        <h2> </h2>
+        <input type="text" id="task-input" placeholder="Add an extra task...">
+        <button onclick="addTaskItem()">Add Task</button>
+        <ul id="task-list"></ul>
+        <button onclick="saveTasks()">Save Tasks</button>
+        <p class="save-message" id="save-message">Tasks saved successfully!</p>
+    </div>
+
+    <div class="history-container">
+        <h2>View Past Tasks</h2>
+        <label for="history-date">Select a Date:</label>
+        <input type="date" id="history-date">
+        <button onclick="viewHistory()">View Tasks</button>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Tasks</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr>
+                    <td colspan="2">No history to display.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const today = new Date().toLocaleDateString('en-CA'); // Uses local date in YYYY-MM-DD format
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const saveMessage = document.getElementById('save-message');
+        const historyBody = document.getElementById('history-body');
+
+        // Load tasks for today (if they exist)
+        function loadTasks() {
+            const tasks = localStorage.getItem(`tasks-${today}`);
+            if (tasks) {
+                taskList.innerHTML = tasks;
+            }
+        }
+
+        // Add a new task to the list
+        function addTaskItem() {
+            const taskText = taskInput.value.trim();
+            if (taskText) {
+                const listItem = document.createElement('li');
+                listItem.textContent = taskText;
+                taskList.appendChild(listItem);
+                taskInput.value = '';
+            }
+        }
+
+        // Save the tasks for today
+        function saveTasks() {
+            const taskItems = taskList.innerHTML.trim();
+            if (taskItems) {
+                localStorage.setItem(`tasks-${today}`, taskItems);
+                saveMessage.style.display = 'block';
+                setTimeout(() => {
+                    saveMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // View past tasks by date
+        function viewHistory() {
+            const selectedDate = document.getElementById('history-date').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const historyTasks = localStorage.getItem(`tasks-${selectedDate}`);
+            if (historyTasks) {
+                historyBody.innerHTML = `
+                    <tr>
+                        <td>${selectedDate}</td>
+                        <td><ul>${historyTasks}</ul></td>
+                    </tr>
+                `;
+            } else {
+                historyBody.innerHTML = '<tr><td colspan="2">No tasks found for the selected date.</td></tr>';
+            }
+        }
+
+        // Initialize the page with today's tasks
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+        });
+    </script>
+</body>
+</html>
